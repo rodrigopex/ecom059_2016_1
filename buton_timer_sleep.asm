@@ -1,0 +1,65 @@
+; PIC16F628A Configuration Bit Settings
+; ASM source line config statements
+#include "p16F628A.inc"
+
+; CONFIG
+; __config 0xFF19
+ __CONFIG _FOSC_INTOSCCLK & _WDTE_OFF & _PWRTE_OFF & _MCLRE_OFF & _BOREN_OFF & _LVP_OFF & _CPD_OFF & _CP_OFF
+
+iCount	EQU	d'241'
+goSleep	EQU	0x20
+
+	ORG	0x0000
+	GOTO	setup
+
+	ORG	0x0004
+	BTFSC	INTCON, T0IF
+	call	i_tmr
+	BTFSC	INTCON, INTF
+	call	button
+	RETFIE
+
+i_tmr:
+	BCF	INTCON, T0IF
+	BSF	INTCON, INTE
+	BSF	goSleep, 0
+	RETURN
+
+button:
+	BCF	INTCON, INTF
+	INCF	PORTA
+	BCF	INTCON, INTE
+	MOVLW	iCount
+	MOVWF	TMR0
+	BCF	goSleep, 0
+	RETURN
+
+
+setup:
+	CLRF	PORTA
+	CLRF	PORTB
+	BANKSEL CMCON
+	MOVLW	0x7
+	MOVWF	CMCON
+
+	BANKSEL	TRISA
+	CLRF	TRISA
+	BSF	TRISB, RB0
+
+	BANKSEL	OPTION_REG
+	MOVLW	b'11010011'
+	MOVWF	OPTION_REG
+	BCF	PCON, OSCF
+
+	MOVLW	b'10110000'
+	MOVWF	INTCON
+	BANKSEL	PORTA
+	MOVLW	iCount
+	MOVWF	TMR0
+
+main:
+	BTFSC	goSleep, 0
+	SLEEP
+	GOTO	main
+
+	END
